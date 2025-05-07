@@ -259,3 +259,17 @@ export const mockUpdateLeaveQuota = (employeeId: string, year: number, totalDays
     }, 500);
   });
 };
+
+export const mockUploadPayslip = (payslipData: Omit<Payslip, 'id' | 'uploadedAt'>): Promise<Payslip> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newPayslip: Payslip = {
+        ...payslipData,
+        id: `payslip${payslips.length + 1}`,
+        uploadedAt: new Date().toISOString(),
+      };
+      payslips.push(newPayslip);
+      resolve(newPayslip);
+    }, 500);
+  });
+};

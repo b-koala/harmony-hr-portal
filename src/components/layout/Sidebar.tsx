@@ -41,6 +41,12 @@ const Sidebar: React.FC = () => {
       roles: ['employee'],
     },
     {
+      name: 'Payslip Management',
+      path: '/payslip-management',
+      icon: <FileText size={20} />,
+      roles: ['manager', 'admin'],
+    },
+    {
       name: 'Employees',
       path: '/employees',
       icon: <Users size={20} />,

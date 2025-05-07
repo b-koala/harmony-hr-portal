@@ -13,6 +13,7 @@ import Employees from "./pages/Employees";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import PayslipManagement from "./pages/PayslipManagement";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/leave-requests" element={<LeaveRequests />} />
             <Route path="/payslips" element={<Payslips />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/payslip-management" element={<PayslipManagement />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
