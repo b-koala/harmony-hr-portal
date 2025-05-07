@@ -9,6 +9,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import LeaveRequests from "./pages/LeaveRequests";
 import Payslips from "./pages/Payslips";
+import Employees from "./pages/Employees";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/leave-requests" element={<LeaveRequests />} />
             <Route path="/payslips" element={<Payslips />} />
+            <Route path="/employees" element={<Employees />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />

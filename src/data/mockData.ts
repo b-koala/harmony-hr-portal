@@ -1,4 +1,3 @@
-
 import { User, UserRole, LeaveRequest, LeaveStatus, LeaveQuota, Payslip } from '../types';
 
 // Mock Users
@@ -216,6 +215,47 @@ export const mockUpdateLeaveRequest = (id: string, status: LeaveStatus, reviewCo
       } else {
         reject(new Error('Leave request not found'));
       }
+    }, 500);
+  });
+};
+
+export const mockUpdateLeaveQuota = (employeeId: string, year: number, totalDays: number, usedDays: number): Promise<LeaveQuota> => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // Calculate remaining days
+      const remainingDays = totalDays - usedDays;
+      
+      // Find if a quota already exists for this employee and year
+      const quotaIndex = leaveQuotas.findIndex(
+        quota => quota.employeeId === employeeId && quota.year === year
+      );
+      
+      let updatedQuota: LeaveQuota;
+      
+      if (quotaIndex !== -1) {
+        // Update existing quota
+        leaveQuotas[quotaIndex] = {
+          ...leaveQuotas[quotaIndex],
+          totalDays,
+          usedDays,
+          remainingDays
+        };
+        updatedQuota = leaveQuotas[quotaIndex];
+      } else {
+        // Create new quota
+        const newQuota: LeaveQuota = {
+          id: `quota${leaveQuotas.length + 1}`,
+          employeeId,
+          year,
+          totalDays,
+          usedDays,
+          remainingDays
+        };
+        leaveQuotas.push(newQuota);
+        updatedQuota = newQuota;
+      }
+      
+      resolve(updatedQuota);
     }, 500);
   });
 };
