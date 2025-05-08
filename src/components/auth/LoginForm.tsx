@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -23,6 +23,7 @@ const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginTips, setLoginTips] = useState<string | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,9 +35,12 @@ const LoginForm: React.FC = () => {
   
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setError(null);
+    setLoginTips(null);
     setIsSubmitting(true);
     
     try {
+      console.log('Attempting login with:', { email: data.email });
+      
       const credentials: LoginCredentials = {
         email: data.email,
         password: data.password,
@@ -45,8 +49,20 @@ const LoginForm: React.FC = () => {
       await login(credentials);
       navigate('/', { replace: true });
     } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Failed to log in');
+      console.error('Login error details:', error);
+      
+      let errorMessage = error.message || 'Failed to log in';
+      
+      // Check for specific error types
+      if (error.message?.includes('email not confirmed')) {
+        errorMessage = 'Email not confirmed. Please check your inbox for a confirmation email.';
+        setLoginTips('If you haven\'t received a confirmation email, contact your administrator to manually confirm your account.');
+      } else if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        setLoginTips('Make sure your account exists and that you\'re using the correct email and password.');
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,6 +78,13 @@ const LoginForm: React.FC = () => {
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        {loginTips && (
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>{loginTips}</AlertDescription>
           </Alert>
         )}
         

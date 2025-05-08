@@ -20,10 +20,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log('Auth state changed:', { event, session: currentSession?.user?.email || 'No session' });
         setSession(currentSession);
         
         if (currentSession?.user) {
           try {
+            console.log('Fetching profile for user:', currentSession.user.id);
             // Get user profile data
             const { data: profileData, error: profileError } = await supabase
               .from('profiles')
@@ -37,6 +39,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             if (profileData) {
+              console.log('Profile data retrieved:', { 
+                email: profileData.email,
+                role: profileData.role 
+              });
+              
               // Create a user object that matches our application's User type
               const userProfile: User = {
                 id: currentSession.user.id,
@@ -47,11 +54,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 avatar: `https://ui-avatars.com/api/?name=${profileData.first_name}+${profileData.last_name}&background=0D8ABC&color=fff`
               };
               setUser(userProfile);
+            } else {
+              console.warn('No profile data found for user:', currentSession.user.id);
             }
           } catch (error) {
             console.error('Error processing authenticated user:', error);
           }
         } else {
+          console.log('No active session, clearing user');
           setUser(null);
         }
         
@@ -61,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log('Initial session check:', currentSession?.user?.email || 'No session found');
       if (currentSession?.user) {
         // We'll let the onAuthStateChange handler above handle setting the user
       } else {
@@ -77,12 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: LoginCredentials): Promise<void> => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Login attempt with email:', credentials.email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
       
       if (error) {
+        console.error('Login failed with error:', error);
         toast({
           variant: "destructive",
           title: "Login failed",
@@ -91,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
+      console.log('Login successful:', data.session?.user?.email);
       // User state will be set by the onAuthStateChange listener
       toast({
         title: "Login successful",
