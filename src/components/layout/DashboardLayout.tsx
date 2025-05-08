@@ -36,6 +36,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     return <Navigate to="/" replace />;
   }
 
+  const handleShowSidebar = () => {
+    setSidebarHidden(false);
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-background">
       <Sidebar setSidebarHidden={setSidebarHidden} />
@@ -48,7 +52,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {isMobile && sidebarHidden && (
             <button 
               className="md:hidden mb-4 bg-primary text-white px-4 py-2 rounded-md shadow-sm"
-              onClick={() => setSidebarHidden(false)}
+              onClick={handleShowSidebar}
             >
               Show Menu
             </button>
