@@ -18,11 +18,11 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md text-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Harmony HR Portal</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 px-4 py-8">
+      <div className="w-full max-w-md text-center mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary">Harmony HR Portal</h1>
         <p className="text-muted-foreground mt-2">Sign in to access your HR dashboard</p>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground mt-2 px-4">
           <strong>Demo credentials:</strong> john.doe@company.com (employee) or jane.smith@company.com (manager) with password "password"
         </p>
       </div>
