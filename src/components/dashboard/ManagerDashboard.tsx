@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,18 +30,25 @@ const ManagerDashboard: React.FC = () => {
   const [actionType, setActionType] = React.useState<'approved' | 'rejected' | null>(null);
   const [comment, setComment] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
   const { user } = useAuth();
 
   React.useEffect(() => {
     const loadRequests = async () => {
       try {
         // Get all leave requests
+        console.log('Fetching leave requests for manager...');
         const requests = await fetchAllLeaveRequests();
+        console.log('Fetched leave requests:', requests);
+        
         const pending = requests.filter(request => request.status === 'pending');
+        console.log('Pending requests:', pending);
+        
         setPendingRequests(pending);
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading pending requests:', error);
+        setError('Failed to load leave requests');
         toast.error('Error', { 
           description: 'Error loading requests - please contact your IT administrator' 
         });
@@ -48,8 +56,13 @@ const ManagerDashboard: React.FC = () => {
       }
     };
 
-    loadRequests();
-  }, []);
+    if (user) {
+      console.log('Manager dashboard - Current user:', user);
+      loadRequests();
+    } else {
+      console.log('Manager dashboard - User not authenticated');
+    }
+  }, [user]);
 
   const handleAction = (request: LeaveRequestWithEmployeeName, action: 'approved' | 'rejected') => {
     setSelectedRequest(request);
@@ -89,6 +102,16 @@ const ManagerDashboard: React.FC = () => {
 
   if (isLoading) {
     return <div className="text-center py-10">Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 border border-red-200 rounded-md bg-red-50 text-red-600">
+        <h3 className="font-semibold mb-2">Error Loading Dashboard</h3>
+        <p>{error}</p>
+        <p className="mt-2 text-sm">Please try refreshing the page or contact your administrator.</p>
+      </div>
+    );
   }
 
   return (

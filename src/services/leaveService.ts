@@ -60,6 +60,8 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
     throw new Error('Failed to fetch leave requests');
   }
 
+  console.log('Leave requests data:', data); // Add logging to check data
+
   return data.map(item => {
     const profile = profileMap.get(item.employee_id);
     const employeeName = profile 
