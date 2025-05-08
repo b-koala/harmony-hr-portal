@@ -56,10 +56,13 @@ const LoginForm: React.FC = () => {
       // Check for specific error types
       if (error.message?.includes('email not confirmed')) {
         errorMessage = 'Email not confirmed. Please check your inbox for a confirmation email.';
-        setLoginTips('If you haven\'t received a confirmation email, contact your administrator to manually confirm your account.');
+        setLoginTips('If you haven\'t received a confirmation email, contact your administrator to manually confirm your account or disable email confirmation in the Supabase dashboard.');
       } else if (error.message?.includes('Invalid login credentials')) {
         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
         setLoginTips('Make sure your account exists and that you\'re using the correct email and password.');
+      } else if (error.message?.includes('Too many requests')) {
+        errorMessage = 'Too many login attempts. Please try again later.';
+        setLoginTips('For security reasons, you need to wait before attempting to log in again.');
       }
       
       setError(errorMessage);
