@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
             {user.avatar ? (
               <AvatarImage src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
             ) : null}
-            <AvatarFallback className="bg-primary text-primary-foreground">
+            <AvatarFallback className="bg-[#004aad] text-white">
               {initials}
             </AvatarFallback>
           </Avatar>
