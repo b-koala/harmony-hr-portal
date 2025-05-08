@@ -1,63 +1,70 @@
 
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
+import { LoginCredentials } from '@/types';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(1, { message: 'Password is required' }),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
-
-type FormValues = z.infer<typeof formSchema>;
 
 const LoginForm: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const form = useForm<FormValues>({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
-
-  const onSubmit = async (data: FormValues) => {
+  
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setError(null);
     setIsSubmitting(true);
+    
     try {
-      await login({ email: data.email, password: data.password });
-      navigate('/');
-    } catch (error) {
+      const credentials: LoginCredentials = {
+        email: data.email,
+        password: data.password,
+      };
+      
+      await login(credentials);
+      navigate('/', { replace: true });
+    } catch (error: any) {
       console.error('Login error:', error);
+      setError(error.message || 'Failed to log in');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-        <CardDescription>
-          Enter your email and password to access your account
-        </CardDescription>
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <h2 className="text-xl font-semibold">Sign In</h2>
       </CardHeader>
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -67,16 +74,18 @@ const LoginForm: React.FC = () => {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="your.email@company.com"
-                      {...field}
-                      disabled={isSubmitting}
+                    <Input 
+                      type="email" 
+                      placeholder="you@company.com" 
+                      autoComplete="email"
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="password"
@@ -84,31 +93,33 @@ const LoginForm: React.FC = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
+                    <Input 
+                      type="password" 
                       placeholder="••••••••"
-                      {...field}
-                      disabled={isSubmitting}
+                      autoComplete="current-password"
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Signing in...' : 'Sign in'}
-              </Button>
-            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
+            </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <Link to="/reset-password" className="text-sm text-primary hover:underline">
+      <CardFooter className="flex flex-col space-y-2 border-t px-6 pt-4">
+        <Link 
+          to="/reset-password"
+          className="text-xs text-center w-full text-muted-foreground hover:text-primary transition-colors"
+        >
           Forgot your password?
         </Link>
       </CardFooter>
