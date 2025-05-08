@@ -8,23 +8,42 @@ import { useAuth } from '@/context/AuthContext';
 import { getLeaveQuota } from '@/data/mockData';
 import { LeaveQuota } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/sonner';
 
 const LeaveRequests: React.FC = () => {
   const { user } = useAuth();
   const [leaveQuota, setLeaveQuota] = React.useState<LeaveQuota | null>(null);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
     if (user) {
-      // Get current year
-      const currentYear = new Date().getFullYear();
-      
-      // Get leave quota
-      const quota = getLeaveQuota(user.id, currentYear);
-      if (quota) {
-        setLeaveQuota(quota);
+      try {
+        // Get current year
+        const currentYear = new Date().getFullYear();
+        
+        // Get leave quota
+        const quota = getLeaveQuota(user.id, currentYear);
+        if (quota) {
+          setLeaveQuota(quota);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading leave quota:', error);
+        toast.error('Error', { 
+          description: 'Error - please contact your IT administrator' 
+        });
+        setIsLoading(false);
       }
     }
   }, [user]);
+
+  if (isLoading && user) {
+    return (
+      <DashboardLayout title="Leave Management" requiredRoles={['employee', 'manager', 'admin']}>
+        <div className="text-center py-10">Loading leave data...</div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Leave Management" requiredRoles={['employee', 'manager', 'admin']}>

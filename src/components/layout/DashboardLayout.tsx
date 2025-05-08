@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Toaster } from '@/components/ui/sonner';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -61,6 +62,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {children}
         </main>
       </div>
+      
+      {/* Add Toaster for notifications */}
+      <Toaster />
     </div>
   );
 };

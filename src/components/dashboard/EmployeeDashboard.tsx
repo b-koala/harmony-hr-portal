@@ -8,6 +8,7 @@ import { LeaveRequest, LeaveQuota } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/sonner';
 
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -17,20 +18,28 @@ const EmployeeDashboard: React.FC = () => {
 
   React.useEffect(() => {
     if (user) {
-      // Get current year
-      const currentYear = new Date().getFullYear();
-      
-      // Get leave quota
-      const quota = getLeaveQuota(user.id, currentYear);
-      if (quota) {
-        setLeaveQuota(quota);
+      try {
+        // Get current year
+        const currentYear = new Date().getFullYear();
+        
+        // Get leave quota
+        const quota = getLeaveQuota(user.id, currentYear);
+        if (quota) {
+          setLeaveQuota(quota);
+        }
+        
+        // Get leave requests
+        const requests = getLeaveRequests(user.id);
+        setLeaveRequests(requests);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        toast.error('Error', { 
+          description: 'Error - please contact your IT administrator' 
+        });
+        setIsLoading(false);
       }
-      
-      // Get leave requests
-      const requests = getLeaveRequests(user.id);
-      setLeaveRequests(requests);
-      
-      setIsLoading(false);
     }
   }, [user]);
 

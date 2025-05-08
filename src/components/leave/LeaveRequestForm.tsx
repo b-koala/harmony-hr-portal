@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { mockCreateLeaveRequest } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
@@ -54,7 +54,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const LeaveRequestForm: React.FC = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -96,18 +95,18 @@ const LeaveRequestForm: React.FC = () => {
         reason: data.reason,
       });
       
-      toast({
-        title: 'Leave request submitted',
-        description: 'Your leave request has been submitted successfully.',
+      toast.success('Leave request submitted', {
+        description: 'Your leave request has been submitted successfully.'
       });
       
       // Reset form
       form.reset();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Submission failed',
-        description: 'There was an error submitting your leave request.',
+      console.error('Error submitting leave request:', error);
+      
+      // Show specific employee error message
+      toast.error('Leave request failed', {
+        description: 'There was an error submitting your leave request. Please try again or contact your IT administrator.'
       });
     } finally {
       setIsSubmitting(false);

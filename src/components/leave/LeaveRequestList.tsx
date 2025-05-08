@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { differenceInBusinessDays, parseISO } from 'date-fns';
+import { toast } from '@/components/ui/sonner';
 
 const LeaveRequestList: React.FC = () => {
   const { user } = useAuth();
@@ -22,19 +23,32 @@ const LeaveRequestList: React.FC = () => {
 
   React.useEffect(() => {
     if (user) {
-      const requests = getLeaveRequests(user.id);
-      // Sort by requested date (newest first)
-      requests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-      setLeaveRequests(requests);
-      setIsLoading(false);
+      try {
+        const requests = getLeaveRequests(user.id);
+        // Sort by requested date (newest first)
+        requests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+        setLeaveRequests(requests);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading leave requests:', error);
+        toast.error('Error', { 
+          description: 'Error - please contact your IT administrator' 
+        });
+        setIsLoading(false);
+      }
     }
   }, [user]);
 
   const calculateDuration = (startDate: string, endDate: string): number => {
-    return differenceInBusinessDays(
-      parseISO(endDate),
-      parseISO(startDate)
-    ) + 1; // Include the start date
+    try {
+      return differenceInBusinessDays(
+        parseISO(endDate),
+        parseISO(startDate)
+      ) + 1; // Include the start date
+    } catch (error) {
+      console.error('Error calculating duration:', error);
+      return 0;
+    }
   };
 
   const getStatusBadge = (status: string) => {

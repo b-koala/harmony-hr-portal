@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { leaveRequests, users, mockUpdateLeaveRequest } from '@/data/mockData';
 import { LeaveRequest, LeaveStatus } from '@/types';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -18,7 +18,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 const ManagerDashboard: React.FC = () => {
-  const { toast } = useToast();
   const [pendingRequests, setPendingRequests] = React.useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequest | null>(null);
@@ -28,10 +27,18 @@ const ManagerDashboard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    // Get all pending leave requests
-    const pending = leaveRequests.filter(request => request.status === 'pending');
-    setPendingRequests(pending);
-    setIsLoading(false);
+    try {
+      // Get all pending leave requests
+      const pending = leaveRequests.filter(request => request.status === 'pending');
+      setPendingRequests(pending);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading pending requests:', error);
+      toast.error('Error', { 
+        description: 'Error - please contact your IT administrator' 
+      });
+      setIsLoading(false);
+    }
   }, []);
 
   const handleAction = (request: LeaveRequest, action: LeaveStatus) => {
@@ -56,18 +63,18 @@ const ManagerDashboard: React.FC = () => {
       setPendingRequests(prev => prev.filter(r => r.id !== selectedRequest.id));
       
       // Show success message
-      toast({
-        title: `Leave request ${actionType}`,
-        description: `The leave request has been ${actionType} successfully.`,
+      toast.success(`Leave request ${actionType}`, {
+        description: `The leave request has been ${actionType} successfully.`
       });
       
       // Close dialog
       setIsDialogOpen(false);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Action failed",
-        description: "There was an error processing your request.",
+      console.error('Error updating leave request:', error);
+      
+      // Show specific manager error message
+      toast.error(`Failed to ${actionType} request`, {
+        description: `There was an error ${actionType === 'approved' ? 'approving' : 'rejecting'} the leave request. Please try again or contact your IT administrator.`
       });
     } finally {
       setIsSubmitting(false);
@@ -76,8 +83,13 @@ const ManagerDashboard: React.FC = () => {
 
   // Get employee name from user ID
   const getEmployeeName = (employeeId: string): string => {
-    const employee = users.find(user => user.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee';
+    try {
+      const employee = users.find(user => user.id === employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee';
+    } catch (error) {
+      console.error('Error fetching employee name:', error);
+      return 'Unknown Employee';
+    }
   };
 
   if (isLoading) {
