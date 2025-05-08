@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -7,7 +8,8 @@ import {
   FileText, 
   LogOut, 
   ChevronRight,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,7 @@ const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileHidden, setMobileHidden] = React.useState(false);
 
   if (!user) return null;
 
@@ -61,7 +64,8 @@ const Sidebar: React.FC = () => {
     <div 
       className={cn(
         "bg-sidebar text-sidebar-foreground h-screen transition-all duration-300 flex flex-col",
-        collapsed ? "w-20" : "w-64"
+        collapsed ? "w-20" : "w-64",
+        mobileHidden ? "hidden md:flex" : "flex"
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
@@ -73,14 +77,27 @@ const Sidebar: React.FC = () => {
             <h1 className="text-xl font-bold">HR</h1>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          <ChevronRight size={20} className={cn("transition-transform", collapsed ? "" : "rotate-180")} />
-        </Button>
+        <div className="flex items-center">
+          {/* Mobile close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileHidden(true)}
+            className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent mr-1"
+          >
+            <X size={20} />
+          </Button>
+          
+          {/* Desktop collapse button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-sidebar-foreground hover:bg-sidebar-accent hidden md:flex"
+          >
+            <ChevronRight size={20} className={cn("transition-transform", collapsed ? "" : "rotate-180")} />
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto py-4">

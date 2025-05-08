@@ -17,6 +17,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   requiredRoles 
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [sidebarHidden, setSidebarHidden] = React.useState(true);
 
   // Show loading state
   if (isLoading) {
@@ -41,6 +42,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         <Header title={title} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+          {/* Mobile sidebar toggle button */}
+          <button 
+            className="md:hidden mb-4 bg-primary text-white px-4 py-2 rounded-md shadow-sm"
+            onClick={() => {
+              // This forces the sidebar to re-render and show
+              const sidebarElement = document.querySelector('.bg-sidebar') as HTMLElement;
+              if (sidebarElement) {
+                sidebarElement.classList.remove('hidden');
+              }
+            }}
+          >
+            Show Menu
+          </button>
+          
           {children}
         </main>
       </div>
