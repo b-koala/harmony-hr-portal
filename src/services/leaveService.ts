@@ -100,19 +100,23 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
 // Fetch leave quota for the current user
 export async function fetchLeaveQuota(): Promise<LeaveQuota | null> {
   try {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await supabase.auth.getUser();
     
-    if (!userData.user) {
-      console.error('No authenticated user found when fetching leave quota');
+    if (authError || !userData.user) {
+      console.error('No authenticated user found when fetching leave quota', authError);
       throw new Error('User not authenticated');
     }
     
     const currentYear = new Date().getFullYear();
+    const userId = userData.user.id;
+    
+    // Add logging to trace execution
+    console.log('Fetching leave quota for user:', userId, 'year:', currentYear);
     
     const { data, error } = await supabase
       .from('leave_quotas')
       .select('*')
-      .eq('employee_id', userData.user.id)
+      .eq('employee_id', userId)
       .eq('year', currentYear)
       .single();
     
@@ -126,14 +130,20 @@ export async function fetchLeaveQuota(): Promise<LeaveQuota | null> {
       throw new Error('Failed to fetch leave quota');
     }
 
-    return {
-      id: data.id,
-      employeeId: data.employee_id,
-      year: data.year,
-      totalDays: data.total_days,
-      usedDays: data.used_days,
-      remainingDays: data.remaining_days || data.total_days - data.used_days,
-    };
+    if (data) {
+      console.log('Leave quota found:', data);
+      return {
+        id: data.id,
+        employeeId: data.employee_id,
+        year: data.year,
+        totalDays: data.total_days,
+        usedDays: data.used_days,
+        remainingDays: data.remaining_days || data.total_days - data.used_days,
+      };
+    } else {
+      console.warn('No leave quota data returned but no error was thrown');
+      return null;
+    }
   } catch (error) {
     console.error('Error in fetchLeaveQuota:', error);
     return null; // Return null instead of throwing to prevent UI crashes
