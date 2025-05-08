@@ -6,7 +6,6 @@ import {
   LayoutDashboard, 
   Calendar, 
   FileText, 
-  LogOut, 
   ChevronRight,
   Users,
   X
@@ -20,7 +19,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ setSidebarHidden }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileHidden, setMobileHidden] = React.useState(false);
@@ -136,20 +135,6 @@ const Sidebar: React.FC<SidebarProps> = ({ setSidebarHidden }) => {
             </Link>
           ))}
         </nav>
-      </div>
-      
-      <div className="p-4 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full flex items-center text-sidebar-foreground hover:bg-sidebar-accent",
-            collapsed ? "justify-center" : "justify-start"
-          )}
-          onClick={logout}
-        >
-          <LogOut size={20} />
-          {!collapsed && <span className="ml-2">Logout</span>}
-        </Button>
       </div>
     </div>
   );
