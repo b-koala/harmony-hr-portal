@@ -13,12 +13,28 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  setSidebarHidden: (hidden: boolean) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ setSidebarHidden }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileHidden, setMobileHidden] = React.useState(false);
+  const isMobile = useIsMobile();
+
+  React.useEffect(() => {
+    // By default, hide sidebar on mobile but show on desktop
+    setMobileHidden(isMobile);
+  }, [isMobile]);
+
+  React.useEffect(() => {
+    // Sync the parent component's state with our local state
+    setSidebarHidden(mobileHidden);
+  }, [mobileHidden, setSidebarHidden]);
 
   if (!user) return null;
 
@@ -65,7 +81,7 @@ const Sidebar: React.FC = () => {
       className={cn(
         "bg-sidebar text-sidebar-foreground h-screen transition-all duration-300 flex flex-col",
         collapsed ? "w-20" : "w-64",
-        mobileHidden ? "hidden md:flex" : "flex"
+        mobileHidden ? "hidden md:flex" : "flex fixed inset-0 md:relative z-50"
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
@@ -113,6 +129,7 @@ const Sidebar: React.FC = () => {
                   : "hover:bg-sidebar-accent/50 text-sidebar-foreground",
                 collapsed ? "justify-center" : "justify-start"
               )}
+              onClick={() => isMobile && setMobileHidden(true)}
             >
               <span className="flex items-center justify-center">{item.icon}</span>
               {!collapsed && <span className="ml-3">{item.name}</span>}

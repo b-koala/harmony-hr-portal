@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [sidebarHidden, setSidebarHidden] = React.useState(true);
+  const isMobile = useIsMobile();
 
   // Show loading state
   if (isLoading) {
@@ -36,25 +38,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-background">
-      <Sidebar />
+      <Sidebar setSidebarHidden={setSidebarHidden} />
       
       <div className="flex flex-col flex-1 w-full overflow-hidden">
         <Header title={title} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
           {/* Mobile sidebar toggle button */}
-          <button 
-            className="md:hidden mb-4 bg-primary text-white px-4 py-2 rounded-md shadow-sm"
-            onClick={() => {
-              // This forces the sidebar to re-render and show
-              const sidebarElement = document.querySelector('.bg-sidebar') as HTMLElement;
-              if (sidebarElement) {
-                sidebarElement.classList.remove('hidden');
-              }
-            }}
-          >
-            Show Menu
-          </button>
+          {isMobile && sidebarHidden && (
+            <button 
+              className="md:hidden mb-4 bg-primary text-white px-4 py-2 rounded-md shadow-sm"
+              onClick={() => setSidebarHidden(false)}
+            >
+              Show Menu
+            </button>
+          )}
           
           {children}
         </main>

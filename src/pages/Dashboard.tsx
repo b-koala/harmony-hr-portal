@@ -11,15 +11,17 @@ const Dashboard: React.FC = () => {
 
   return (
     <DashboardLayout title="Dashboard">
-      {user?.role === 'employee' && <EmployeeDashboard />}
-      {user?.role === 'manager' && <ManagerDashboard />}
-      {user?.role === 'admin' && (
-        <Alert>
-          <AlertDescription>
-            Admin dashboard is not implemented in this demo.
-          </AlertDescription>
-        </Alert>
-      )}
+      <div className="w-full">
+        {user?.role === 'employee' && <EmployeeDashboard />}
+        {user?.role === 'manager' && <ManagerDashboard />}
+        {user?.role === 'admin' && (
+          <Alert>
+            <AlertDescription>
+              Admin dashboard is not implemented in this demo.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     </DashboardLayout>
   );
 };
