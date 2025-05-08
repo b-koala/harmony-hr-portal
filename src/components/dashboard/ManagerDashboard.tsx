@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,11 +60,11 @@ const ManagerDashboard: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedRequest || !actionType || !user) return;
+    if (!selectedRequest || !actionType) return;
 
     setIsSubmitting(true);
     try {
-      await updateLeaveRequestStatus(selectedRequest.id, actionType, comment, user.id);
+      await updateLeaveRequestStatus(selectedRequest.id, actionType, comment);
       
       // Update the UI
       setPendingRequests(prev => prev.filter(r => r.id !== selectedRequest.id));

@@ -34,10 +34,7 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
     .from('leave_requests')
     .select(`
       *,
-      profiles:employee_id (
-        firstName:first_name,
-        lastName:last_name
-      )
+      profiles(first_name, last_name)
     `)
     .order('requested_at', { ascending: false });
   
@@ -49,7 +46,7 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
   return data.map(item => ({
     id: item.id,
     employeeId: item.employee_id,
-    employeeName: item.profiles ? `${item.profiles.firstName} ${item.profiles.lastName}` : 'Unknown',
+    employeeName: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}` : 'Unknown',
     startDate: item.start_date,
     endDate: item.end_date,
     reason: item.reason,
@@ -97,9 +94,16 @@ export async function createLeaveRequest(request: {
   endDate: string;
   reason: string;
 }): Promise<LeaveRequest> {
+  const { data: userData } = await supabase.auth.getUser();
+  
+  if (!userData.user) {
+    throw new Error('User not authenticated');
+  }
+  
   const { data, error } = await supabase
     .from('leave_requests')
     .insert({
+      employee_id: userData.user.id,
       start_date: request.startDate,
       end_date: request.endDate,
       reason: request.reason,
@@ -132,9 +136,16 @@ export async function updateLeaveRequestStatus(
   status: 'approved' | 'rejected', 
   comment?: string
 ): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  
+  if (!userData.user) {
+    throw new Error('User not authenticated');
+  }
+  
   const updateData: any = {
     status,
     reviewed_at: new Date().toISOString(),
+    reviewed_by: userData.user.id,
   };
   
   if (comment) {
