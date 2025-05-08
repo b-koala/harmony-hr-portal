@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LeaveRequest, LeaveStatus } from '@/types';
+import { LeaveRequest } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +26,7 @@ const ManagerDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithEmployeeName | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
-  const [actionType, setActionType] = React.useState<LeaveStatus | null>(null);
+  const [actionType, setActionType] = React.useState<'approved' | 'rejected' | null>(null);
   const [comment, setComment] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const { user } = useAuth();
@@ -52,7 +51,7 @@ const ManagerDashboard: React.FC = () => {
     loadRequests();
   }, []);
 
-  const handleAction = (request: LeaveRequestWithEmployeeName, action: LeaveStatus) => {
+  const handleAction = (request: LeaveRequestWithEmployeeName, action: 'approved' | 'rejected') => {
     setSelectedRequest(request);
     setActionType(action);
     setComment('');

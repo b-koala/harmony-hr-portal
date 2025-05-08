@@ -30,12 +30,29 @@ export async function fetchLeaveRequests(): Promise<LeaveRequest[]> {
 
 // Fetch leave requests for managers (all requests)
 export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
+  // First get the profiles data separately
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name');
+  
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError);
+    throw new Error('Failed to fetch employee profiles');
+  }
+  
+  // Create a lookup map for quick access
+  const profileMap = new Map();
+  profilesData.forEach(profile => {
+    profileMap.set(profile.id, {
+      firstName: profile.first_name || '',
+      lastName: profile.last_name || ''
+    });
+  });
+  
+  // Now fetch all leave requests
   const { data, error } = await supabase
     .from('leave_requests')
-    .select(`
-      *,
-      profiles(first_name, last_name)
-    `)
+    .select('*')
     .order('requested_at', { ascending: false });
   
   if (error) {
@@ -43,19 +60,26 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
     throw new Error('Failed to fetch leave requests');
   }
 
-  return data.map(item => ({
-    id: item.id,
-    employeeId: item.employee_id,
-    employeeName: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}` : 'Unknown',
-    startDate: item.start_date,
-    endDate: item.end_date,
-    reason: item.reason,
-    status: item.status as 'pending' | 'approved' | 'rejected',
-    requestedAt: item.requested_at,
-    reviewedBy: item.reviewed_by || undefined,
-    reviewedAt: item.reviewed_at || undefined,
-    reviewComment: item.review_comment || undefined,
-  }));
+  return data.map(item => {
+    const profile = profileMap.get(item.employee_id);
+    const employeeName = profile 
+      ? `${profile.firstName} ${profile.lastName}`.trim() 
+      : 'Unknown';
+    
+    return {
+      id: item.id,
+      employeeId: item.employee_id,
+      employeeName,
+      startDate: item.start_date,
+      endDate: item.end_date,
+      reason: item.reason,
+      status: item.status as 'pending' | 'approved' | 'rejected',
+      requestedAt: item.requested_at,
+      reviewedBy: item.reviewed_by || undefined,
+      reviewedAt: item.reviewed_at || undefined,
+      reviewComment: item.review_comment || undefined,
+    };
+  });
 }
 
 // Fetch leave quota for the current user
