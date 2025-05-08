@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -93,8 +94,12 @@ const LeaveRequestForm: React.FC = () => {
         description: 'Your leave request has been submitted successfully.'
       });
       
-      // Reset form
-      form.reset();
+      // Reset form completely - this will clear all fields and reset validation
+      form.reset({
+        startDate: undefined,
+        endDate: undefined,
+        reason: '',
+      });
     } catch (error) {
       console.error('Error submitting leave request:', error);
       
