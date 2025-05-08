@@ -4,9 +4,17 @@ import { LeaveRequest, LeaveQuota } from "@/types";
 
 // Fetch leave requests for the current user
 export async function fetchLeaveRequests(): Promise<LeaveRequest[]> {
+  const { data: userData } = await supabase.auth.getUser();
+  
+  if (!userData.user) {
+    console.error('No authenticated user found when fetching leave requests');
+    throw new Error('User not authenticated');
+  }
+  
   const { data, error } = await supabase
     .from('leave_requests')
     .select('*')
+    .eq('employee_id', userData.user.id)
     .order('requested_at', { ascending: false });
   
   if (error) {
@@ -30,88 +38,106 @@ export async function fetchLeaveRequests(): Promise<LeaveRequest[]> {
 
 // Fetch leave requests for managers (all requests)
 export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
-  // First get the profiles data separately
-  const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name');
-  
-  if (profilesError) {
-    console.error('Error fetching profiles:', profilesError);
-    throw new Error('Failed to fetch employee profiles');
-  }
-  
-  // Create a lookup map for quick access
-  const profileMap = new Map();
-  profilesData.forEach(profile => {
-    profileMap.set(profile.id, {
-      firstName: profile.first_name || '',
-      lastName: profile.last_name || ''
-    });
-  });
-  
-  // Now fetch all leave requests
-  const { data, error } = await supabase
-    .from('leave_requests')
-    .select('*')
-    .order('requested_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching all leave requests:', error);
-    throw new Error('Failed to fetch leave requests');
-  }
-
-  console.log('Leave requests data:', data); // Add logging to check data
-
-  return data.map(item => {
-    const profile = profileMap.get(item.employee_id);
-    const employeeName = profile 
-      ? `${profile.firstName} ${profile.lastName}`.trim() 
-      : 'Unknown';
+  try {
+    // First get the profiles data separately
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name');
     
-    return {
-      id: item.id,
-      employeeId: item.employee_id,
-      employeeName,
-      startDate: item.start_date,
-      endDate: item.end_date,
-      reason: item.reason,
-      status: item.status as 'pending' | 'approved' | 'rejected',
-      requestedAt: item.requested_at,
-      reviewedBy: item.reviewed_by || undefined,
-      reviewedAt: item.reviewed_at || undefined,
-      reviewComment: item.review_comment || undefined,
-    };
-  });
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw new Error('Failed to fetch employee profiles');
+    }
+    
+    // Create a lookup map for quick access
+    const profileMap = new Map();
+    profilesData.forEach((profile: any) => {
+      profileMap.set(profile.id, {
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || ''
+      });
+    });
+    
+    // Now fetch all leave requests
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .order('requested_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching all leave requests:', error);
+      throw new Error('Failed to fetch leave requests');
+    }
+
+    console.log('Leave requests data:', data); // Add logging to check data
+
+    return data.map(item => {
+      const profile = profileMap.get(item.employee_id);
+      const employeeName = profile 
+        ? `${profile.firstName} ${profile.lastName}`.trim() || 'Unknown'
+        : 'Unknown';
+      
+      return {
+        id: item.id,
+        employeeId: item.employee_id,
+        employeeName,
+        startDate: item.start_date,
+        endDate: item.end_date,
+        reason: item.reason,
+        status: item.status as 'pending' | 'approved' | 'rejected',
+        requestedAt: item.requested_at,
+        reviewedBy: item.reviewed_by || undefined,
+        reviewedAt: item.reviewed_at || undefined,
+        reviewComment: item.review_comment || undefined,
+      };
+    });
+  } catch (error) {
+    console.error('Error in fetchAllLeaveRequests:', error);
+    return []; // Return empty array instead of throwing to prevent UI crashes
+  }
 }
 
 // Fetch leave quota for the current user
 export async function fetchLeaveQuota(): Promise<LeaveQuota | null> {
-  const currentYear = new Date().getFullYear();
-  
-  const { data, error } = await supabase
-    .from('leave_quotas')
-    .select('*')
-    .eq('year', currentYear)
-    .single();
-  
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No data found
-      console.warn('No leave quota found for current year');
-      return null;
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    
+    if (!userData.user) {
+      console.error('No authenticated user found when fetching leave quota');
+      throw new Error('User not authenticated');
     }
-    console.error('Error fetching leave quota:', error);
-    throw new Error('Failed to fetch leave quota');
-  }
+    
+    const currentYear = new Date().getFullYear();
+    
+    const { data, error } = await supabase
+      .from('leave_quotas')
+      .select('*')
+      .eq('employee_id', userData.user.id)
+      .eq('year', currentYear)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No data found
+        console.warn('No leave quota found for current year');
+        return null;
+      }
+      console.error('Error fetching leave quota:', error);
+      throw new Error('Failed to fetch leave quota');
+    }
 
-  return {
-    id: data.id,
-    employeeId: data.employee_id,
-    year: data.year,
-    totalDays: data.total_days,
-    usedDays: data.used_days,
-    remainingDays: data.remaining_days || data.total_days - data.used_days,
-  };
+    return {
+      id: data.id,
+      employeeId: data.employee_id,
+      year: data.year,
+      totalDays: data.total_days,
+      usedDays: data.used_days,
+      remainingDays: data.remaining_days || data.total_days - data.used_days,
+    };
+  } catch (error) {
+    console.error('Error in fetchLeaveQuota:', error);
+    return null; // Return null instead of throwing to prevent UI crashes
+  }
 }
 
 // Create a new leave request
@@ -133,6 +159,7 @@ export async function createLeaveRequest(request: {
       start_date: request.startDate,
       end_date: request.endDate,
       reason: request.reason,
+      status: 'pending'
     })
     .select()
     .single();

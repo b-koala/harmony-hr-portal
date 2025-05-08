@@ -19,47 +19,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         console.log('Auth state changed:', { event, session: currentSession?.user?.email || 'No session' });
         setSession(currentSession);
         
         if (currentSession?.user) {
-          try {
-            console.log('Fetching profile for user:', currentSession.user.id);
-            // Get user profile data
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', currentSession.user.id)
-              .single();
+          // Instead of directly querying for profile, create a default user
+          // with basic information from the auth session
+          const defaultUser: User = {
+            id: currentSession.user.id,
+            email: currentSession.user.email || '',
+            firstName: '',
+            lastName: '',
+            role: 'employee', // Default role
+            avatar: `https://ui-avatars.com/api/?name=U+S&background=0D8ABC&color=fff`
+          };
+          
+          setUser(defaultUser);
+          
+          // Then try to fetch additional profile data
+          setTimeout(async () => {
+            try {
+              console.log('Fetching profile for user:', currentSession.user.id);
+              // Get user profile data
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', currentSession.user.id)
+                .single();
+                
+              if (profileError) {
+                console.error('Error fetching profile:', profileError);
+                return;
+              }
               
-            if (profileError) {
-              console.error('Error fetching profile:', profileError);
-              return;
+              if (profileData) {
+                console.log('Profile data retrieved:', { 
+                  email: profileData.email,
+                  role: profileData.role 
+                });
+                
+                // Update user with profile data
+                const userProfile: User = {
+                  id: currentSession.user.id,
+                  email: profileData.email,
+                  firstName: profileData.first_name || '',
+                  lastName: profileData.last_name || '',
+                  role: profileData.role as any,
+                  avatar: `https://ui-avatars.com/api/?name=${profileData.first_name}+${profileData.last_name}&background=0D8ABC&color=fff`
+                };
+                setUser(userProfile);
+              } else {
+                console.warn('No profile data found for user:', currentSession.user.id);
+              }
+            } catch (error) {
+              console.error('Error processing authenticated user:', error);
             }
-            
-            if (profileData) {
-              console.log('Profile data retrieved:', { 
-                email: profileData.email,
-                role: profileData.role 
-              });
-              
-              // Create a user object that matches our application's User type
-              const userProfile: User = {
-                id: currentSession.user.id,
-                email: profileData.email,
-                firstName: profileData.first_name || '',
-                lastName: profileData.last_name || '',
-                role: profileData.role as any,
-                avatar: `https://ui-avatars.com/api/?name=${profileData.first_name}+${profileData.last_name}&background=0D8ABC&color=fff`
-              };
-              setUser(userProfile);
-            } else {
-              console.warn('No profile data found for user:', currentSession.user.id);
-            }
-          } catch (error) {
-            console.error('Error processing authenticated user:', error);
-          }
+          }, 0);
         } else {
           console.log('No active session, clearing user');
           setUser(null);
@@ -72,11 +88,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log('Initial session check:', currentSession?.user?.email || 'No session found');
-      if (currentSession?.user) {
-        // We'll let the onAuthStateChange handler above handle setting the user
-      } else {
+      if (!currentSession?.user) {
         setIsLoading(false);
       }
+      // We'll let the onAuthStateChange handler above handle setting the user
     });
 
     return () => {
