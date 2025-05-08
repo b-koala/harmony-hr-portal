@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -20,11 +19,10 @@ import {
 } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/sonner';
-import { mockCreateLeaveRequest } from '@/data/mockData';
-import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { format, addDays, differenceInDays, isWeekend } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import { createLeaveRequest } from '@/services/leaveService';
 
 // Calculate minimum date (14 days from now)
 const minDate = addDays(new Date(), 14);
@@ -54,7 +52,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const LeaveRequestForm: React.FC = () => {
-  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Create form
@@ -84,12 +81,9 @@ const LeaveRequestForm: React.FC = () => {
   const businessDays = startDate && endDate ? calculateBusinessDays(startDate, endDate) : 0;
 
   const onSubmit = async (data: FormValues) => {
-    if (!user) return;
-    
     setIsSubmitting(true);
     try {
-      await mockCreateLeaveRequest({
-        employeeId: user.id,
+      await createLeaveRequest({
         startDate: format(data.startDate, 'yyyy-MM-dd'),
         endDate: format(data.endDate, 'yyyy-MM-dd'),
         reason: data.reason,

@@ -5,10 +5,10 @@ import LeaveRequestForm from '@/components/leave/LeaveRequestForm';
 import LeaveRequestList from '@/components/leave/LeaveRequestList';
 import LeaveCard from '@/components/leave/LeaveCard';
 import { useAuth } from '@/context/AuthContext';
-import { getLeaveQuota } from '@/data/mockData';
 import { LeaveQuota } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/sonner';
+import { fetchLeaveQuota } from '@/services/leaveService';
 
 const LeaveRequests: React.FC = () => {
   const { user } = useAuth();
@@ -17,23 +17,24 @@ const LeaveRequests: React.FC = () => {
 
   React.useEffect(() => {
     if (user) {
-      try {
-        // Get current year
-        const currentYear = new Date().getFullYear();
-        
-        // Get leave quota
-        const quota = getLeaveQuota(user.id, currentYear);
-        if (quota) {
-          setLeaveQuota(quota);
+      const loadLeaveQuota = async () => {
+        try {
+          // Get leave quota
+          const quota = await fetchLeaveQuota();
+          if (quota) {
+            setLeaveQuota(quota);
+          }
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Error loading leave quota:', error);
+          toast.error('Error', { 
+            description: 'Error loading leave data - please contact your IT administrator' 
+          });
+          setIsLoading(false);
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error loading leave quota:', error);
-        toast.error('Error', { 
-          description: 'Error - please contact your IT administrator' 
-        });
-        setIsLoading(false);
-      }
+      };
+      
+      loadLeaveQuota();
     }
   }, [user]);
 

@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getLeaveRequests } from '@/data/mockData';
 import { LeaveRequest } from '@/types';
 import { format } from 'date-fns';
 import {
@@ -15,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { differenceInBusinessDays, parseISO } from 'date-fns';
 import { toast } from '@/components/ui/sonner';
+import { fetchLeaveRequests } from '@/services/leaveService';
 
 const LeaveRequestList: React.FC = () => {
   const { user } = useAuth();
@@ -23,19 +23,21 @@ const LeaveRequestList: React.FC = () => {
 
   React.useEffect(() => {
     if (user) {
-      try {
-        const requests = getLeaveRequests(user.id);
-        // Sort by requested date (newest first)
-        requests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-        setLeaveRequests(requests);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error loading leave requests:', error);
-        toast.error('Error', { 
-          description: 'Error - please contact your IT administrator' 
-        });
-        setIsLoading(false);
-      }
+      const loadLeaveRequests = async () => {
+        try {
+          const requests = await fetchLeaveRequests();
+          setLeaveRequests(requests);
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Error loading leave requests:', error);
+          toast.error('Error', { 
+            description: 'Error loading leave requests - please contact your IT administrator' 
+          });
+          setIsLoading(false);
+        }
+      };
+      
+      loadLeaveRequests();
     }
   }, [user]);
 

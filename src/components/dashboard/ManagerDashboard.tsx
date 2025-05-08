@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { leaveRequests, users, mockUpdateLeaveRequest } from '@/data/mockData';
 import { LeaveRequest, LeaveStatus } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { format } from 'date-fns';
@@ -16,32 +14,44 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { fetchAllLeaveRequests, updateLeaveRequestStatus } from '@/services/leaveService';
+import { useAuth } from '@/context/AuthContext';
+
+interface LeaveRequestWithEmployeeName extends LeaveRequest {
+  employeeName?: string;
+}
 
 const ManagerDashboard: React.FC = () => {
-  const [pendingRequests, setPendingRequests] = React.useState<LeaveRequest[]>([]);
+  const [pendingRequests, setPendingRequests] = React.useState<LeaveRequestWithEmployeeName[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
-  const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithEmployeeName | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
   const [actionType, setActionType] = React.useState<LeaveStatus | null>(null);
   const [comment, setComment] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
+  const { user } = useAuth();
 
   React.useEffect(() => {
-    try {
-      // Get all pending leave requests
-      const pending = leaveRequests.filter(request => request.status === 'pending');
-      setPendingRequests(pending);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading pending requests:', error);
-      toast.error('Error', { 
-        description: 'Error - please contact your IT administrator' 
-      });
-      setIsLoading(false);
-    }
+    const loadRequests = async () => {
+      try {
+        // Get all leave requests
+        const requests = await fetchAllLeaveRequests();
+        const pending = requests.filter(request => request.status === 'pending');
+        setPendingRequests(pending);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading pending requests:', error);
+        toast.error('Error', { 
+          description: 'Error loading requests - please contact your IT administrator' 
+        });
+        setIsLoading(false);
+      }
+    };
+
+    loadRequests();
   }, []);
 
-  const handleAction = (request: LeaveRequest, action: LeaveStatus) => {
+  const handleAction = (request: LeaveRequestWithEmployeeName, action: LeaveStatus) => {
     setSelectedRequest(request);
     setActionType(action);
     setComment('');
@@ -49,15 +59,11 @@ const ManagerDashboard: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedRequest || !actionType) return;
+    if (!selectedRequest || !actionType || !user) return;
 
     setIsSubmitting(true);
     try {
-      // In a real app, you would have the actual manager ID from the authenticated user
-      const managerId = 'user2'; // Mock manager ID
-      
-      // Update the leave request
-      await mockUpdateLeaveRequest(selectedRequest.id, actionType, comment, managerId);
+      await updateLeaveRequestStatus(selectedRequest.id, actionType, comment, user.id);
       
       // Update the UI
       setPendingRequests(prev => prev.filter(r => r.id !== selectedRequest.id));
@@ -81,17 +87,6 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Get employee name from user ID
-  const getEmployeeName = (employeeId: string): string => {
-    try {
-      const employee = users.find(user => user.id === employeeId);
-      return employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee';
-    } catch (error) {
-      console.error('Error fetching employee name:', error);
-      return 'Unknown Employee';
-    }
-  };
-
   if (isLoading) {
     return <div className="text-center py-10">Loading dashboard data...</div>;
   }
@@ -110,7 +105,7 @@ const ManagerDashboard: React.FC = () => {
                 <div key={request.id} className="border rounded-lg p-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium">{getEmployeeName(request.employeeId)}</h3>
+                      <h3 className="font-medium">{request.employeeName || 'Unknown Employee'}</h3>
                       <p className="text-sm text-muted-foreground">{request.reason}</p>
                       <div className="mt-2">
                         <Badge variant="outline">
