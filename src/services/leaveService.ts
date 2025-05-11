@@ -39,23 +39,32 @@ export async function fetchLeaveRequests(): Promise<LeaveRequest[]> {
 // Fetch leave requests for managers (all requests)
 export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
   try {
-    // First get the profiles data separately
+    console.log('Fetching all leave requests');
+    
+    // First get the profiles data separately with more fields
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name');
+      .select('id, first_name, last_name, email, role');
     
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
       throw new Error('Failed to fetch employee profiles');
     }
     
-    // Create a lookup map for quick access
+    console.log('Fetched profiles:', profilesData.length);
+    
+    // Create a lookup map for quick access (with more debugging)
     const profileMap = new Map();
     profilesData.forEach((profile: any) => {
       profileMap.set(profile.id, {
         firstName: profile.first_name || '',
-        lastName: profile.last_name || ''
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        role: profile.role
       });
+      
+      console.log('Added profile to map:', profile.id, 
+        `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'No name data');
     });
     
     // Now fetch all leave requests
@@ -69,12 +78,20 @@ export async function fetchAllLeaveRequests(): Promise<LeaveRequest[]> {
       throw new Error('Failed to fetch leave requests');
     }
 
-    console.log('Leave requests data:', data); // Add logging to check data
-
+    console.log('Fetched leave requests:', data.length);
+    
+    // Map the data with better logging
     return data.map(item => {
       const profile = profileMap.get(item.employee_id);
+      
+      // Debug each mapping attempt
+      console.log('Mapping leave request:', item.id, 
+        'employee_id:', item.employee_id, 
+        'found profile:', !!profile);
+      
+      // Use email as fallback if name is missing
       const employeeName = profile 
-        ? `${profile.firstName} ${profile.lastName}`.trim() || 'Unknown'
+        ? `${profile.firstName} ${profile.lastName}`.trim() || profile.email || 'Unknown'
         : 'Unknown';
       
       return {
