@@ -49,23 +49,32 @@ export async function fetchUserPayslips(month?: number, year?: number): Promise<
 // For managers/admins to fetch all payslips
 export async function fetchAllPayslips(employeeId?: string, month?: number, year?: number): Promise<Payslip[]> {
   try {
+    console.log('Fetching all payslips with filters:', { employeeId, month, year });
+    
     // First get user profiles for employee names
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name');
+      .select('id, first_name, last_name, email');
     
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
       throw new Error('Failed to fetch employee profiles');
     }
     
+    console.log('Fetched profiles:', profilesData.length);
+    
     // Create a lookup map for quick access
     const profileMap = new Map();
     profilesData.forEach((profile: any) => {
+      // Store the profile data with both the ID and email as keys for better matching
       profileMap.set(profile.id, {
         firstName: profile.first_name || '',
-        lastName: profile.last_name || ''
+        lastName: profile.last_name || '',
+        email: profile.email || ''
       });
+      
+      // Debug the profile being added
+      console.log('Added profile to map:', profile.id, profile.first_name, profile.last_name);
     });
     
     // Build the query for payslips
@@ -94,10 +103,16 @@ export async function fetchAllPayslips(employeeId?: string, month?: number, year
       throw new Error('Failed to fetch payslips');
     }
     
+    console.log('Fetched payslips:', data.length);
+    
     return data.map(item => {
       const profile = profileMap.get(item.employee_id);
+      
+      // Debug the mapping
+      console.log('Mapping payslip:', item.id, 'employee_id:', item.employee_id, 'found profile:', !!profile);
+      
       const employeeName = profile 
-        ? `${profile.firstName} ${profile.lastName}`.trim() || 'Unknown'
+        ? `${profile.firstName} ${profile.lastName}`.trim() || profile.email || 'Unknown'
         : 'Unknown';
       
       return {
