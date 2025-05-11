@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,17 +19,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { users, mockUploadPayslip } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { uploadPayslip } from '@/services/payslipService';
+
+interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+}
 
 const PayslipUploadForm: React.FC = () => {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState<boolean>(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const months = [
     { value: '1', label: 'January' },
@@ -49,8 +59,49 @@ const PayslipUploadForm: React.FC = () => {
 
   const years = [2023, 2024, 2025, 2026, 2027].map(year => year.toString());
   
-  // Filter out manager and admin users, showing only employees
-  const employees = users.filter(user => user.role === 'employee');
+  // Fetch employees from Supabase
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, role')
+          .eq('role', 'employee');
+        
+        if (error) {
+          throw error;
+        }
+
+        const formattedEmployees = data.map(employee => {
+          const firstName = employee.first_name || '';
+          const lastName = employee.last_name || '';
+          // Create a display name - use name if available, fallback to email
+          const displayName = firstName || lastName ? 
+            `${firstName} ${lastName}`.trim() : 
+            employee.email || employee.id;
+            
+          return {
+            id: employee.id,
+            firstName: firstName,
+            lastName: lastName,
+            displayName: displayName
+          };
+        });
+        
+        setEmployees(formattedEmployees);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        toast.error('Failed to load employees', {
+          description: 'Could not retrieve employee list'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -69,25 +120,20 @@ const PayslipUploadForm: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isFormValid()) return;
+    if (!isFormValid() || !selectedFile) return;
 
     setIsUploading(true);
     try {
-      // In a real app, this would upload the file to a storage service
-      // and save the metadata to a database
-      const fileUrl = `/mockPayslips/${selectedFile?.name || 'payslip.pdf'}`;
-      
-      await mockUploadPayslip({
-        employeeId: selectedEmployee,
-        month: parseInt(selectedMonth, 10),
-        year: parseInt(selectedYear, 10),
-        documentUrl: fileUrl,
-      });
+      await uploadPayslip(
+        selectedFile,
+        selectedEmployee,
+        parseInt(selectedMonth, 10),
+        parseInt(selectedYear, 10)
+      );
 
       // Show success toast
-      toast({
-        title: "Payslip uploaded",
-        description: "The payslip has been uploaded successfully.",
+      toast.success('Payslip uploaded', {
+        description: 'The payslip has been uploaded successfully.'
       });
 
       // Reset form
@@ -96,11 +142,9 @@ const PayslipUploadForm: React.FC = () => {
       setSelectedMonth('');
       setSelectedYear(new Date().getFullYear().toString());
       setIsConfirmDialogOpen(false);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description: "There was an error uploading the payslip.",
+    } catch (error: any) {
+      toast.error('Upload failed', {
+        description: error.message || 'There was an error uploading the payslip.'
       });
     } finally {
       setIsUploading(false);
@@ -111,13 +155,21 @@ const PayslipUploadForm: React.FC = () => {
     if (isFormValid()) {
       setIsConfirmDialogOpen(true);
     } else {
-      toast({
-        variant: "destructive",
-        title: "Form incomplete",
-        description: "Please fill all required fields.",
+      toast.error('Form incomplete', {
+        description: 'Please fill all required fields.'
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Loading employees...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -138,7 +190,7 @@ const PayslipUploadForm: React.FC = () => {
                   <SelectContent>
                     {employees.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
-                        {employee.firstName} {employee.lastName}
+                        {employee.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -233,8 +285,8 @@ const PayslipUploadForm: React.FC = () => {
                   <p className="text-sm font-medium">Employee:</p>
                   <p className="text-sm">
                     {(() => {
-                      const employee = users.find(u => u.id === selectedEmployee);
-                      return employee ? `${employee.firstName} ${employee.lastName}` : '';
+                      const employee = employees.find(e => e.id === selectedEmployee);
+                      return employee ? employee.displayName : '';
                     })()}
                   </p>
                 </div>

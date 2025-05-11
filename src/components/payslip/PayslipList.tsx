@@ -1,7 +1,5 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getPayslipsByFilter, getMonthName } from '@/data/mockData';
 import { Payslip } from '@/types';
 import {
   Card,
@@ -28,53 +26,57 @@ import {
 import { FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-
-const years = [2025, 2024, 2023];
-const months = [
-  { value: '1', label: 'January' },
-  { value: '2', label: 'February' },
-  { value: '3', label: 'March' },
-  { value: '4', label: 'April' },
-  { value: '5', label: 'May' },
-  { value: '6', label: 'June' },
-  { value: '7', label: 'July' },
-  { value: '8', label: 'August' },
-  { value: '9', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
-];
+import { toast } from '@/components/ui/sonner';
+import { fetchUserPayslips, getMonthName } from '@/services/payslipService';
 
 const PayslipList: React.FC = () => {
   const { user } = useAuth();
-  const [payslips, setPayslips] = React.useState<Payslip[]>([]);
-  const [isLoading, setIsLoading] = React.useState<boolean>(true);
-  const [selectedMonth, setSelectedMonth] = React.useState<string>('');
-  const [selectedYear, setSelectedYear] = React.useState<string>(new Date().getFullYear().toString());
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
-  React.useEffect(() => {
+  const years = [2023, 2024, 2025, 2026, 2027].map(year => year.toString());
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+
+  useEffect(() => {
     if (user) {
       loadPayslips();
     }
   }, [user, selectedMonth, selectedYear]);
 
-  const loadPayslips = () => {
+  const loadPayslips = async () => {
     if (!user) return;
     
     setIsLoading(true);
     
-    const month = selectedMonth ? parseInt(selectedMonth, 10) : undefined;
-    const year = selectedYear ? parseInt(selectedYear, 10) : undefined;
-    
-    const filteredPayslips = getPayslipsByFilter(user.id, month, year);
-    // Sort by date (newest first)
-    filteredPayslips.sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.month - a.month;
-    });
-    
-    setPayslips(filteredPayslips);
-    setIsLoading(false);
+    try {
+      const month = selectedMonth ? parseInt(selectedMonth, 10) : undefined;
+      const year = selectedYear ? parseInt(selectedYear, 10) : undefined;
+      
+      const payslipData = await fetchUserPayslips(month, year);
+      setPayslips(payslipData);
+    } catch (error) {
+      console.error('Error loading payslips:', error);
+      toast.error('Failed to load payslips', {
+        description: 'Could not retrieve your payslip data'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetFilters = () => {
@@ -97,7 +99,7 @@ const PayslipList: React.FC = () => {
                 <SelectValue placeholder="All Months" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Months</SelectItem>
+                <SelectItem value="">All Months</SelectItem>
                 {months.map((month) => (
                   <SelectItem key={month.value} value={month.value}>
                     {month.label}
@@ -114,7 +116,7 @@ const PayslipList: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {years.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
+                  <SelectItem key={year} value={year}>
                     {year}
                   </SelectItem>
                 ))}
