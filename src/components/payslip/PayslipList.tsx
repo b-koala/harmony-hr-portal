@@ -33,7 +33,7 @@ const PayslipList: React.FC = () => {
   const { user } = useAuth();
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>("all"); // Changed from empty string to "all"
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
   const years = [2023, 2024, 2025, 2026, 2027].map(year => year.toString());
@@ -64,10 +64,13 @@ const PayslipList: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const month = selectedMonth ? parseInt(selectedMonth, 10) : undefined;
+      // Converting "all" to undefined for the month filter
+      const month = selectedMonth === "all" ? undefined : parseInt(selectedMonth, 10);
       const year = selectedYear ? parseInt(selectedYear, 10) : undefined;
       
+      console.log('Fetching payslips with filters:', { month, year });
       const payslipData = await fetchUserPayslips(month, year);
+      console.log('Fetched payslips:', payslipData.length);
       setPayslips(payslipData);
     } catch (error) {
       console.error('Error loading payslips:', error);
@@ -80,7 +83,7 @@ const PayslipList: React.FC = () => {
   };
 
   const resetFilters = () => {
-    setSelectedMonth('');
+    setSelectedMonth("all"); // Changed from empty string to "all"
     setSelectedYear(new Date().getFullYear().toString());
   };
 
@@ -99,7 +102,7 @@ const PayslipList: React.FC = () => {
                 <SelectValue placeholder="All Months" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Months</SelectItem>
+                <SelectItem value="all">All Months</SelectItem> {/* Changed from empty string to "all" */}
                 {months.map((month) => (
                   <SelectItem key={month.value} value={month.value}>
                     {month.label}

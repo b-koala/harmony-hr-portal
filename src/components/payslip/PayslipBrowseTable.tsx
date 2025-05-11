@@ -32,8 +32,8 @@ import { fetchAllPayslips, getMonthName } from '@/services/payslipService';
 const PayslipBrowseTable: React.FC = () => {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all"); // Changed from empty string to "all"
+  const [selectedMonth, setSelectedMonth] = useState<string>("all"); // Changed from empty string to "all"
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [employees, setEmployees] = useState<{id: string, name: string}[]>([]);
 
@@ -57,19 +57,30 @@ const PayslipBrowseTable: React.FC = () => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
+        console.log('Fetching employees for payslip browse table');
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, role')
+          .select('id, first_name, last_name, email, role')
           .eq('role', 'employee');
         
         if (error) {
           throw error;
         }
 
-        const formattedEmployees = data.map(employee => ({
-          id: employee.id,
-          name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.id
-        }));
+        console.log('Fetched employee profiles:', data?.length || 0);
+        const formattedEmployees = data.map(employee => {
+          // Use name if available, otherwise use email
+          const firstName = employee.first_name || '';
+          const lastName = employee.last_name || '';
+          const displayName = firstName || lastName ? 
+            `${firstName} ${lastName}`.trim() : 
+            employee.email || employee.id;
+            
+          return {
+            id: employee.id,
+            name: displayName
+          };
+        });
         
         setEmployees(formattedEmployees);
       } catch (error) {
@@ -88,14 +99,14 @@ const PayslipBrowseTable: React.FC = () => {
     const loadPayslips = async () => {
       setIsLoading(true);
       try {
-        const month = selectedMonth === 'all' ? undefined : parseInt(selectedMonth, 10);
-        const year = selectedYear === 'all' ? undefined : parseInt(selectedYear, 10);
+        // Convert "all" to undefined for filters
+        const employeeId = selectedEmployee === "all" ? undefined : selectedEmployee;
+        const month = selectedMonth === "all" ? undefined : parseInt(selectedMonth, 10);
+        const year = selectedYear === "all" ? undefined : parseInt(selectedYear, 10);
         
-        const data = await fetchAllPayslips(
-          selectedEmployee === 'all' ? undefined : selectedEmployee,
-          month,
-          year
-        );
+        console.log('Fetching payslips with filters:', { employeeId, month, year });
+        const data = await fetchAllPayslips(employeeId, month, year);
+        console.log('Fetched payslips:', data?.length || 0);
         
         setPayslips(data);
       } catch (error) {
@@ -112,8 +123,8 @@ const PayslipBrowseTable: React.FC = () => {
   }, [selectedEmployee, selectedMonth, selectedYear]);
 
   const resetFilters = () => {
-    setSelectedEmployee('all');
-    setSelectedMonth('all');
+    setSelectedEmployee("all");
+    setSelectedMonth("all");
     setSelectedYear(new Date().getFullYear().toString());
   };
 
@@ -195,7 +206,11 @@ const PayslipBrowseTable: React.FC = () => {
               <TableBody>
                 {payslips.map((payslip) => (
                   <TableRow key={payslip.id}>
-                    <TableCell>{payslip.employeeName || 'Unknown'}</TableCell>
+                    <TableCell>
+                      {payslip.employeeName && payslip.employeeName !== 'Unknown' 
+                        ? payslip.employeeName 
+                        : <span className="text-muted-foreground italic">Unknown Employee</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-muted-foreground" />
