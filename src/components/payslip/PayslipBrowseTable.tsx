@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -25,66 +24,108 @@ import {
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Filter } from 'lucide-react';
 import { format } from 'date-fns';
-import { users, payslips, getMonthName } from '@/data/mockData';
-import { Payslip, User } from '@/types';
-
-const years = [2025, 2024, 2023];
-const months = [
-  { value: '1', label: 'January' },
-  { value: '2', label: 'February' },
-  { value: '3', label: 'March' },
-  { value: '4', label: 'April' },
-  { value: '5', label: 'May' },
-  { value: '6', label: 'June' },
-  { value: '7', label: 'July' },
-  { value: '8', label: 'August' },
-  { value: '9', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
-];
+import { toast } from '@/components/ui/sonner';
+import { Payslip } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchAllPayslips, getMonthName } from '@/services/payslipService';
 
 const PayslipBrowseTable: React.FC = () => {
-  const [filteredPayslips, setFilteredPayslips] = useState<Payslip[]>([]);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all"); // Changed from empty string to "all"
+  const [selectedMonth, setSelectedMonth] = useState<string>("all"); // Changed from empty string to "all"
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [employees, setEmployees] = useState<{id: string, name: string}[]>([]);
 
-  // Only include employees (not managers or admins)
-  const employeeUsers = users.filter(user => user.role === 'employee');
+  const years = [2023, 2024, 2025, 2026, 2027].map(year => year.toString());
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
 
+  // Fetch employees from Supabase
   useEffect(() => {
-    setIsLoading(true);
-    
-    // Apply filters
-    const filtered = payslips.filter(payslip => {
-      const matchesEmployee = selectedEmployee === 'all' || payslip.employeeId === selectedEmployee;
-      const matchesMonth = selectedMonth === 'all' || payslip.month === parseInt(selectedMonth, 10);
-      const matchesYear = selectedYear === 'all' || payslip.year === parseInt(selectedYear, 10);
-      
-      return matchesEmployee && matchesMonth && matchesYear;
-    });
-    
-    // Sort by date (newest first)
-    filtered.sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.month - a.month;
-    });
-    
-    setFilteredPayslips(filtered);
-    setIsLoading(false);
+    const fetchEmployees = async () => {
+      try {
+        console.log('Fetching employees for payslip browse table');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, role')
+          .eq('role', 'employee');
+        
+        if (error) {
+          throw error;
+        }
+
+        console.log('Fetched employee profiles:', data?.length || 0);
+        const formattedEmployees = data.map(employee => {
+          // Use name if available, otherwise use email
+          const firstName = employee.first_name || '';
+          const lastName = employee.last_name || '';
+          const displayName = firstName || lastName ? 
+            `${firstName} ${lastName}`.trim() : 
+            employee.email || employee.id;
+            
+          return {
+            id: employee.id,
+            name: displayName
+          };
+        });
+        
+        setEmployees(formattedEmployees);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        toast.error('Failed to load employees', {
+          description: 'Could not retrieve employee list'
+        });
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  // Fetch payslips based on filters
+  useEffect(() => {
+    const loadPayslips = async () => {
+      setIsLoading(true);
+      try {
+        // Convert "all" to undefined for filters
+        const employeeId = selectedEmployee === "all" ? undefined : selectedEmployee;
+        const month = selectedMonth === "all" ? undefined : parseInt(selectedMonth, 10);
+        const year = selectedYear === "all" ? undefined : parseInt(selectedYear, 10);
+        
+        console.log('Fetching payslips with filters:', { employeeId, month, year });
+        const data = await fetchAllPayslips(employeeId, month, year);
+        console.log('Fetched payslips:', data?.length || 0);
+        
+        setPayslips(data);
+      } catch (error) {
+        console.error('Error fetching payslips:', error);
+        toast.error('Error loading payslips', {
+          description: 'Failed to load payslip data'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPayslips();
   }, [selectedEmployee, selectedMonth, selectedYear]);
 
   const resetFilters = () => {
-    setSelectedEmployee('all');
-    setSelectedMonth('all');
+    setSelectedEmployee("all");
+    setSelectedMonth("all");
     setSelectedYear(new Date().getFullYear().toString());
-  };
-
-  const getUserName = (userId: string): string => {
-    const user = users.find(u => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
   };
 
   return (
@@ -103,9 +144,9 @@ const PayslipBrowseTable: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employees</SelectItem>
-                {employeeUsers.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -136,7 +177,7 @@ const PayslipBrowseTable: React.FC = () => {
               <SelectContent>
                 <SelectItem value="all">All Years</SelectItem>
                 {years.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
+                  <SelectItem key={year} value={year}>
                     {year}
                   </SelectItem>
                 ))}
@@ -151,7 +192,7 @@ const PayslipBrowseTable: React.FC = () => {
 
         {isLoading ? (
           <div className="text-center py-10">Loading payslips...</div>
-        ) : filteredPayslips.length > 0 ? (
+        ) : payslips.length > 0 ? (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -163,9 +204,13 @@ const PayslipBrowseTable: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPayslips.map((payslip) => (
+                {payslips.map((payslip) => (
                   <TableRow key={payslip.id}>
-                    <TableCell>{getUserName(payslip.employeeId)}</TableCell>
+                    <TableCell>
+                      {payslip.employeeName && payslip.employeeName !== 'Unknown' 
+                        ? payslip.employeeName 
+                        : <span className="text-muted-foreground italic">Unknown Employee</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-muted-foreground" />

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { LeaveRequest } from '@/types';
@@ -14,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { differenceInBusinessDays, parseISO } from 'date-fns';
 import { toast } from '@/components/ui/sonner';
-import { fetchLeaveRequests } from '@/services/leaveService';
+import { fetchLeaveRequests, fetchAllLeaveRequests } from '@/services/leaveService';
 
 const LeaveRequestList: React.FC = () => {
   const { user } = useAuth();
@@ -25,7 +24,14 @@ const LeaveRequestList: React.FC = () => {
     if (user) {
       const loadLeaveRequests = async () => {
         try {
-          const requests = await fetchLeaveRequests();
+          console.log('Loading leave requests for user role:', user.role);
+          
+          // Fetch all requests if user is manager or admin, otherwise just the user's requests
+          const requests = user.role === 'manager' || user.role === 'admin' 
+            ? await fetchAllLeaveRequests()
+            : await fetchLeaveRequests();
+            
+          console.log('Fetched leave requests:', requests.length);
           setLeaveRequests(requests);
           setIsLoading(false);
         } catch (error) {
@@ -77,6 +83,10 @@ const LeaveRequestList: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                {/* Only show Employee column for managers and admins */}
+                {(user?.role === 'manager' || user?.role === 'admin') && (
+                  <TableHead>Employee</TableHead>
+                )}
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Days</TableHead>
@@ -88,6 +98,14 @@ const LeaveRequestList: React.FC = () => {
             <TableBody>
               {leaveRequests.map((request) => (
                 <TableRow key={request.id}>
+                  {/* Only show Employee column for managers and admins */}
+                  {(user?.role === 'manager' || user?.role === 'admin') && (
+                    <TableCell>
+                      {request.employeeName && request.employeeName !== 'Unknown' 
+                        ? request.employeeName 
+                        : <span className="text-muted-foreground italic">Unknown Employee</span>}
+                    </TableCell>
+                  )}
                   <TableCell>{format(new Date(request.startDate), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{format(new Date(request.endDate), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{calculateDuration(request.startDate, request.endDate)}</TableCell>
