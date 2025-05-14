@@ -56,9 +56,16 @@ const UserManagement: React.FC = () => {
         }
       });
 
+      // Check for Supabase function error first
       if (error) {
         console.error('Edge Function error:', error);
         throw error;
+      }
+
+      // Check the response data for success/error
+      if (data && !data.success) {
+        // Function returned successfully but with an error message
+        throw new Error(data.error || 'Unknown error occurred');
       }
 
       console.log('User created successfully via Edge Function');
@@ -78,12 +85,28 @@ const UserManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Error creating user:', error);
       
-      let errorMessage = error.message || 'An unexpected error occurred.';
+      let errorMessage = 'An unexpected error occurred.';
       
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'A user with this email already exists.';
-      } else if (error.message?.includes('Failed to fetch')) {
+      // Extract error message
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.context?.json?.error) {
+        errorMessage = error.context.json.error;
+      }
+      
+      // Handle specific error cases
+      if (errorMessage.includes('User already registered') || 
+          errorMessage.includes('already exists') ||
+          errorMessage.includes('User with this email already exists')) {
+        errorMessage = 'A user with this email already exists. Please use a different email.';
+      } else if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'Network error. Please check your connection.';
+      } else if (errorMessage.includes('Insufficient permissions')) {
+        errorMessage = 'You do not have permission to create users.';
+      } else if (errorMessage.includes('Unauthorized')) {
+        errorMessage = 'Your session has expired. Please log in again.';
+      } else if (errorMessage.includes('Invalid email')) {
+        errorMessage = 'Please enter a valid email address.';
       }
       
       toast.error('Failed to create user', {
