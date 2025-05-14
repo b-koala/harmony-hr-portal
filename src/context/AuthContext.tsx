@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { User, LoginCredentials, AuthContextType } from '../types';
@@ -19,9 +18,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log('Auth state changed:', { event, session: currentSession?.user?.email || 'No session' });
         setSession(currentSession);
+        
+        // Handle password recovery
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected');
+          // Don't set user yet, let the password reset flow handle this
+          setIsLoading(false);
+          return;
+        }
         
         if (currentSession?.user) {
           // Instead of directly querying for profile, create a default user
@@ -162,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) {
