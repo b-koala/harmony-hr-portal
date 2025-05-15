@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,6 @@ const formSchema = z.object({
 });
 
 const ResetPasswordForm: React.FC = () => {
-  const { resetPassword } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -35,12 +33,37 @@ const ResetPasswordForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      await resetPassword(data.email);
+      console.log('Sending password reset email to:', data.email);
+      
+      // Using window.location.origin to ensure we get the correct localhost URL
+      const redirectTo = `${window.location.origin}/reset-password`;
+      console.log('Reset URL:', redirectTo);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: redirectTo,
+      });
+      
+      if (error) {
+        console.error('Reset password error:', error);
+        throw error;
+      }
+      
+      console.log('Password reset email sent successfully');
       setSuccess(true);
       form.reset();
     } catch (error: any) {
       console.error('Password reset error:', error);
-      setError(error.message || 'Failed to send password reset email');
+      
+      let errorMessage = error.message || 'Failed to send password reset email';
+      
+      // Handle specific error cases
+      if (error.message?.includes('Email not found')) {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.message?.includes('Email rate limit exceeded')) {
+        errorMessage = 'Too many reset requests. Please try again later.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -50,6 +73,9 @@ const ResetPasswordForm: React.FC = () => {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <h2 className="text-xl font-semibold">Reset Password</h2>
+        <p className="text-sm text-muted-foreground">
+          Enter your email to receive reset instructions
+        </p>
       </CardHeader>
       <CardContent>
         {error && (

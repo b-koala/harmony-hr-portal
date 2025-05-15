@@ -22,9 +22,6 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md text-center mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Harmony HR Portal</h1>
         <p className="text-muted-foreground mt-2">Sign in to access your HR dashboard</p>
-        <p className="text-xs text-muted-foreground mt-2 px-4">
-          <strong>Demo credentials:</strong> john.doe@company.com (employee) or jane.smith@company.com (manager) with password "password"
-        </p>
       </div>
       <LoginForm />
     </div>

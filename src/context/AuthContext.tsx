@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { User, LoginCredentials, AuthContextType } from '../types';
@@ -19,9 +18,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log('Auth state changed:', { event, session: currentSession?.user?.email || 'No session' });
         setSession(currentSession);
+        
+        // Handle password recovery
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected');
+          // Don't set user yet, let the password reset flow handle this
+          setIsLoading(false);
+          return;
+        }
         
         if (currentSession?.user) {
           // Instead of directly querying for profile, create a default user
@@ -161,23 +168,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string): Promise<void> => {
     setIsLoading(true);
     try {
+      console.log('Sending password reset email to:', email);
+      
+      // Using window.location.origin to ensure we get the correct localhost URL
+      const redirectTo = `${window.location.origin}/reset-password`;
+      console.log('Reset redirect URL:', redirectTo);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
+        redirectTo: redirectTo,
       });
       
       if (error) {
+        console.error('Reset password error:', error);
         throw error;
       }
       
+      console.log('Password reset email sent successfully');
       toast({
         title: "Password reset email sent",
         description: "Check your inbox for instructions to reset your password.",
       });
     } catch (error: any) {
+      console.error('Password reset error:', error);
+      
+      let errorMessage = error.message || 'Failed to send password reset email';
+      
+      // Handle specific error cases
+      if (error.message?.includes('Email not found')) {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.message?.includes('Email rate limit exceeded')) {
+        errorMessage = 'Too many reset requests. Please try again later.';
+      }
+      
       toast({
         variant: "destructive",
         title: "Password reset failed",
-        description: error.message || "Something went wrong.",
+        description: errorMessage,
       });
       throw error;
     } finally {
